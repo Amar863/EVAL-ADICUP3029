@@ -155,10 +155,7 @@ uint32_t AD7793_Scan(enMode mode,  uint8_t ui8channel)
 {
 	static  uint32_t ui32result, ui32reg_value;
 
-	/* Set value (read command + DATA register address) to write in COMM
-	 * register */
-	uint8_t ui8reg_adrr = (AD7793_COMM_READ
-	                       | AD7793_COMM_ADR(AD7793_REG_DATA));
+	AD7793_Calibrate(ui8channel, CAL_INT_FULL_MODE);
 
 	/* Select channel to scan */
 	AD7793_SelectChannel(ui8channel);
@@ -177,14 +174,13 @@ uint32_t AD7793_Scan(enMode mode,  uint8_t ui8channel)
 		AD7793_WriteRegister(AD7793_REG_MODE, ui32reg_value);
 	}
 
-	if(mode == CONTINUOUS_CONV)
+	if(mode == CONTINUOUS_CONV) {
 		//DioClr(CS_PORT, CS_PIN);
+	}
 
-		while ((AD7793_ReadRegister(AD7793_REG_STAT)& RDY_BIT) != RDY_BIT);
+	while ((AD7793_ReadRegister(AD7793_REG_STAT)& RDY_BIT) == RDY_BIT);
 
-	SPI_Write(0xAA, 0xAAAA, 2);
-
-	ui32result =  SPI_Read(ui8reg_adrr,  reg_size[AD7793_REG_DATA]);
+	ui32result = AD7793_ReadRegister(AD7793_REG_DATA);
 
 	//DioSet(CS_PORT, CS_PIN);
 
@@ -241,7 +237,7 @@ void AD7793_Calibrate(uint8_t ui8channel, enMode mode)
 	AD7793_WriteRegister(AD7793_REG_MODE, ui32reg_value);
 
 	/* Wait until RDY bit from STATUS register is high */
-	while ((AD7793_ReadRegister(AD7793_REG_STAT)& RDY_BIT) != RDY_BIT);
+	while ((AD7793_ReadRegister(AD7793_REG_STAT)& RDY_BIT) == RDY_BIT);
 
 	//DioSet(CS_PORT, CS_PIN); todo: asses the importance of the gpio functions
 }
@@ -254,13 +250,13 @@ void AD7793_Calibrate(uint8_t ui8channel, enMode mode)
 
    @return int32_t - converted voltage
 **/
-int32_t AD7793_ConvertToVolts(uint32_t u32adcValue)
+float AD7793_ConvertToVolts(uint32_t u32adcValue)
 {
-	int32_t i32voltage;
+	float f32voltage;
 
 	/* Vref = 1170 [mV]    */        /* Calculate voltage */
-	i32voltage = ((int64_t)(u32adcValue - 0x800000) * 1170) / (int32_t)0x800000;
+	f32voltage = ((float)(u32adcValue - 0x800000) * 1170) / (float)0x800000;
 
-	return i32voltage;
+	return f32voltage;
 }
 
